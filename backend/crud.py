@@ -23,7 +23,7 @@ def create_glucose_record(db: Session, record: schemas.GlucoseRecordCreate):
     timestamp = record.timestamp if record.timestamp else datetime.utcnow()
     db_record = models.GlucoseRecord(
         patient_id=record.patient_id,
-        glucose_level=record.glucse_level, # Typo here
+        glucose_level=record.glucose_level, # Fixed typo
         meal_status=record.meal_status,
         timestamp=timestamp
     )
