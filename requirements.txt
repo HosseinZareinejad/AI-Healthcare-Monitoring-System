@@ -5,3 +5,6 @@ pandas
 numpy
 requests
 pydantic
+crewai
+langchain-groq
+python-dotenv
