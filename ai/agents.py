@@ -1,15 +1,14 @@
 import os
-from crewai import Agent
-from langchain_groq import ChatGroq
+from crewai import Agent, LLM
 from dotenv import load_dotenv
 from .tools import fetch_patient_history
 
 load_dotenv()
 
-# Initialize the Groq LLM
-llm = ChatGroq(
-    api_key=os.getenv("GROQ_API_KEY"),
-    model="llama3-70b-8192" # or llama3-8b-8192 for faster/cheaper responses
+# Initialize the LLM via CrewAI's built-in support (which uses litellm under the hood)
+llm = LLM(
+    model="groq/llama3-70b-8192",
+    api_key=os.getenv("GROQ_API_KEY")
 )
 
 # Agent 1: Medical Data Collector
