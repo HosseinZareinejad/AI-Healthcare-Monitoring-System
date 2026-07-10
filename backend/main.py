@@ -4,6 +4,7 @@ from typing import List
 
 from . import crud, models, schemas
 from .database import SessionLocal, engine
+from ai.crew import run_analysis_crew
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -47,3 +48,17 @@ def read_patient_history(patient_id: int, skip: int = 0, limit: int = 100, db: S
     if db_patient is None:
         raise HTTPException(status_code=404, detail="Patient not found")
     return crud.get_patient_history(db=db, patient_id=patient_id, skip=skip, limit=limit)
+
+@app.post("/api/patients/{patient_id}/analyze")
+def analyze_patient(patient_id: int, db: Session = Depends(get_db)):
+    # Check if patient exists
+    db_patient = crud.get_patient(db, patient_id=patient_id)
+    if db_patient is None:
+        raise HTTPException(status_code=404, detail="Patient not found")
+        
+    try:
+        # Run CrewAI analysis
+        report = run_analysis_crew(str(patient_id))
+        return {"patient_id": patient_id, "analysis_report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
