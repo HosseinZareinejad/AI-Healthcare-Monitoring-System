@@ -1,13 +1,23 @@
 import os
+import litellm
 from crewai import Agent, LLM
 from dotenv import load_dotenv
 from .tools import fetch_patient_history
 
+# Patch litellm to fix a bug where it sends unsupported 'cache_breakpoint' to Groq
+_original_completion = litellm.completion
+def patched_completion(*args, **kwargs):
+    if 'messages' in kwargs:
+        for msg in kwargs['messages']:
+            msg.pop('cache_breakpoint', None)
+    return _original_completion(*args, **kwargs)
+litellm.completion = patched_completion
+
 load_dotenv()
 
-# Initialize the LLM via CrewAI's built-in support (which uses litellm under the hood)
+# Initialize the LLM via CrewAI's built-in support
 llm = LLM(
-    model="groq/llama3-70b-8192",
+    model="groq/llama-3.3-70b-versatile",
     api_key=os.getenv("GROQ_API_KEY")
 )
 
