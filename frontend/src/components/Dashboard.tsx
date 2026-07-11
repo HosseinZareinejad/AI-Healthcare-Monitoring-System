@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Activity, Brain, User, AlertTriangle } from 'lucide-react';
+import { Activity, Brain, User, AlertTriangle, Mic, MicOff, Send, Volume2 } from 'lucide-react';
 
 interface GlucoseRecord {
   id: number;
@@ -23,6 +23,9 @@ export default function Dashboard() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     // Fetch patient info
@@ -41,6 +44,61 @@ export default function Dashboard() {
       setAiReport("Failed to generate AI report.");
     }
     setLoadingAi(false);
+  };
+
+  const handleChat = async (message: string) => {
+    if (!message.trim()) return;
+    setLoadingAi(true);
+    setChatInput('');
+    try {
+      const res = await axios.post('/api/patients/1/chat', { message });
+      const reply = res.data.response;
+      setAiReport(reply);
+      speakText(reply);
+    } catch (err) {
+      console.error(err);
+      setAiReport("Failed to get AI response.");
+    }
+    setLoadingAi(false);
+  };
+
+  const toggleRecording = () => {
+    // @ts-ignore
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+
+    if (isRecording) {
+      recognition.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setChatInput(transcript);
+      handleChat(transcript);
+      setIsRecording(false);
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+    
+    recognition.start();
+  };
+
+  const speakText = (text: string) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
   };
 
   const latestRecord = records.length > 0 ? records[records.length - 1] : null;
@@ -143,7 +201,7 @@ export default function Dashboard() {
             </button>
           </div>
           
-          <div className="flex-1 bg-background rounded-xl p-4 overflow-y-auto border border-surface-hover">
+          <div className="flex-1 bg-background rounded-xl p-4 overflow-y-auto border border-surface-hover mb-4">
             {loadingAi ? (
               <div className="h-full flex flex-col items-center justify-center text-muted space-y-4">
                 <Brain className="animate-pulse text-secondary" size={48} />
@@ -151,15 +209,46 @@ export default function Dashboard() {
               </div>
             ) : aiReport ? (
               <div className="prose prose-invert prose-sm max-w-none">
+                {isSpeaking && (
+                  <div className="flex items-center gap-2 text-secondary mb-4 bg-secondary/10 p-2 rounded-lg">
+                    <Volume2 size={16} className="animate-pulse" />
+                    <span className="text-xs font-semibold">AI is speaking...</span>
+                  </div>
+                )}
                 {aiReport.split('\n').map((line, i) => (
                   <p key={i} className="mb-2">{line}</p>
                 ))}
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-muted text-center">
-                Click "Generate Report" to get a comprehensive medical assessment powered by Llama 3.
+              <div className="h-full flex items-center justify-center text-muted text-center p-4">
+                Click "Generate Report" or use the Voice Assistant below to ask a specific question.
               </div>
             )}
+          </div>
+
+          {/* Chat Input */}
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={toggleRecording}
+              className={`p-3 rounded-xl transition-all ${isRecording ? 'bg-danger text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-surface-hover text-text hover:bg-secondary hover:text-white'}`}
+            >
+              {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            <input 
+              type="text" 
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleChat(chatInput)}
+              placeholder="Ask anything..."
+              className="flex-1 bg-background border border-surface-hover rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition-colors"
+            />
+            <button 
+              onClick={() => handleChat(chatInput)}
+              disabled={!chatInput.trim() || loadingAi}
+              className="p-3 bg-primary text-white rounded-xl hover:bg-primary/80 disabled:opacity-50 transition-colors"
+            >
+              <Send size={20} />
+            </button>
           </div>
         </div>
 

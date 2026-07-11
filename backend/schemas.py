@@ -35,3 +35,6 @@ class Patient(PatientBase):
 
     class Config:
         orm_mode = True
+
+class ChatRequest(BaseModel):
+    message: str

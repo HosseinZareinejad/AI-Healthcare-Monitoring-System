@@ -5,7 +5,7 @@ from typing import List
 
 from . import crud, models, schemas
 from .database import SessionLocal, engine
-from ai.crew import run_analysis_crew
+from ai.crew import run_analysis_crew, run_chat_crew
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -71,3 +71,15 @@ def analyze_patient(patient_id: int, db: Session = Depends(get_db)):
         return {"patient_id": patient_id, "analysis_report": report}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+@app.post("/api/patients/{patient_id}/chat")
+def chat_with_ai(patient_id: int, request: schemas.ChatRequest, db: Session = Depends(get_db)):
+    db_patient = crud.get_patient(db, patient_id=patient_id)
+    if db_patient is None:
+        raise HTTPException(status_code=404, detail="Patient not found")
+        
+    try:
+        response = run_chat_crew(str(patient_id), request.message)
+        return {"patient_id": patient_id, "response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")

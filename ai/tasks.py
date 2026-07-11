@@ -22,3 +22,14 @@ def get_health_analysis_task(patient_id: str) -> Task:
         expected_output="A markdown-formatted medical assessment report with actionable recommendations.",
         agent=health_analyst
     )
+
+def get_chat_analysis_task(patient_id: str, user_message: str) -> Task:
+    return Task(
+        description=(
+            f"Analyze the glucose data retrieved for patient ID {patient_id} in the context of the user's specific query: '{user_message}'. "
+            "Provide a short, easy-to-understand response addressing the user's question directly. "
+            "Keep the response concise and suitable for text-to-speech reading."
+        ),
+        expected_output="A conversational, concise response directly answering the user's question based on their medical data.",
+        agent=health_analyst
+    )
