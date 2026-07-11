@@ -10,8 +10,34 @@ base_url = os.getenv("API_URL", "http://localhost:8000")
 API_URL = f"{base_url.rstrip('/')}/api/glucose/"
 PATIENT_ID = 1
 
+def ensure_patient_exists():
+    # Check if patient exists
+    res = requests.get(f"{base_url.rstrip('/')}/api/patients/{PATIENT_ID}")
+    if res.status_code == 404:
+        print(f"Patient {PATIENT_ID} not found. Creating default patient...")
+        patient_data = {
+            "name": "Sarah Connor",
+            "age": 45,
+            "gender": "Female",
+            "diabetes_type": "Type 2",
+            "medication": "Metformin 500mg"
+        }
+        create_res = requests.post(f"{base_url.rstrip('/')}/api/patients/", json=patient_data)
+        if create_res.status_code == 200:
+            print("Patient created successfully!")
+        else:
+            print("Failed to create patient:", create_res.text)
+
 def simulate_real_time_data():
     print(f"Starting real-time data simulator for patient {PATIENT_ID}...")
+    
+    # Wait a few seconds for the backend to start up
+    time.sleep(5)
+    try:
+        ensure_patient_exists()
+    except Exception as e:
+        print("Could not connect to API for initial check:", e)
+        
     try:
         while True:
             # Generate a realistic random glucose level
@@ -33,7 +59,7 @@ def simulate_real_time_data():
                 else:
                     print(f"Failed to send data: {response.status_code} - {response.text}")
             except requests.exceptions.ConnectionError:
-                print("Connection error. Make sure the FastAPI server is running on http://localhost:8000")
+                print("Connection error. Make sure the FastAPI server is running.")
             
             # Wait for 10 seconds before sending the next reading
             time.sleep(10)
