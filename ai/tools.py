@@ -2,7 +2,7 @@ from crewai.tools import tool
 from backend.database import SessionLocal
 from backend import crud
 
-@tool("Fetch Patient Glucose History")
+@tool
 def fetch_patient_history(patient_id: str) -> str:
     """
     Fetches the historical glucose records for a given patient_id.
