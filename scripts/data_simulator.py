@@ -3,8 +3,11 @@ import time
 import random
 from datetime import datetime
 
-# Assuming FastAPI runs locally on port 8000
-API_URL = "http://localhost:8000/api/glucose/"
+import os
+
+# Assuming FastAPI runs locally on port 8000 by default
+base_url = os.getenv("API_URL", "http://localhost:8000")
+API_URL = f"{base_url.rstrip('/')}/api/glucose/"
 PATIENT_ID = 1
 
 def simulate_real_time_data():
