@@ -17,7 +17,7 @@ load_dotenv()
 
 # Initialize the LLM via CrewAI's built-in support
 llm = LLM(
-    model="groq/llama3-8b-8192",
+    model="groq/llama-3.1-8b-instant",
     api_key=os.getenv("GROQ_API_KEY")
 )
 
