@@ -150,10 +150,13 @@ export default function Dashboard() {
   const isHigh = latestRecord && latestRecord.glucose_level > 180;
 
   // Format data for chart
-  const chartData = records.map(r => ({
-    time: new Date(r.timestamp).toLocaleDateString() + ' ' + new Date(r.timestamp).getHours() + ':00',
-    glucose: r.glucose_level
-  })).slice(-14); // Last 14 readings
+  const chartData = records.map(r => {
+    const d = new Date(r.timestamp);
+    return {
+      time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      glucose: r.glucose_level
+    };
+  }).slice(-14); // Last 14 readings
 
   return (
     <div className="min-h-screen p-8 max-w-7xl mx-auto space-y-8">
