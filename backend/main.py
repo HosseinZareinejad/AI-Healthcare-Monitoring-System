@@ -66,8 +66,12 @@ def analyze_patient(patient_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Patient not found")
         
     try:
+        # Fetch history to inject into prompt
+        records = crud.get_patient_history(db, patient_id=patient_id, limit=20)
+        formatted_data = "\n".join([f"Date: {r.timestamp.strftime('%Y-%m-%d %H:%M')}, Glucose: {r.glucose_level} mg/dL, Meal Status: {r.meal_status}" for r in records]) if records else "No records found."
+        
         # Run CrewAI analysis
-        report = run_analysis_crew(str(patient_id))
+        report = run_analysis_crew(str(patient_id), formatted_data)
         return {"patient_id": patient_id, "analysis_report": report}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
@@ -79,7 +83,11 @@ def chat_with_ai(patient_id: int, request: schemas.ChatRequest, db: Session = De
         raise HTTPException(status_code=404, detail="Patient not found")
         
     try:
-        response = run_chat_crew(str(patient_id), request.message)
+        # Fetch history to inject into prompt
+        records = crud.get_patient_history(db, patient_id=patient_id, limit=20)
+        formatted_data = "\n".join([f"Date: {r.timestamp.strftime('%Y-%m-%d %H:%M')}, Glucose: {r.glucose_level} mg/dL, Meal Status: {r.meal_status}" for r in records]) if records else "No records found."
+        
+        response = run_chat_crew(str(patient_id), formatted_data, request.message)
         return {"patient_id": patient_id, "response": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
