@@ -26,13 +26,58 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [alertData, setAlertData] = useState<{message: string, isHigh: boolean} | null>(null);
 
   useEffect(() => {
     // Fetch patient info
     axios.get('/api/patients/1').then(res => setPatient(res.data)).catch(console.error);
     // Fetch history
     axios.get('/api/patients/1/history').then(res => setRecords(res.data)).catch(console.error);
+
+    // Setup WebSocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/patients/1/ws`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (event) => {
+      const newRecord = JSON.parse(event.data);
+      setRecords(prev => [...prev, newRecord]);
+      
+      // Check for alert
+      if (newRecord.glucose_level > 180) {
+        triggerAlert(`High Glucose Alert: ${newRecord.glucose_level} mg/dL`, true);
+      } else if (newRecord.glucose_level < 70) {
+        triggerAlert(`Low Glucose Alert: ${newRecord.glucose_level} mg/dL`, false);
+      } else {
+        setAlertData(null);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
   }, []);
+
+  const triggerAlert = (message: string, isHigh: boolean) => {
+    setAlertData({ message, isHigh });
+    // Play alert sound
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(isHigh ? 800 : 400, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(isHigh ? 1200 : 200, audioCtx.currentTime + 0.5);
+    
+    gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+    
+    oscillator.start(audioCtx.currentTime);
+    oscillator.stop(audioCtx.currentTime + 0.5);
+  };
 
   const handleAnalyze = async () => {
     setLoadingAi(true);
@@ -112,6 +157,17 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen p-8 max-w-7xl mx-auto space-y-8">
+      {/* Alert Banner */}
+      {alertData && (
+        <div className={`p-4 rounded-xl shadow-lg border-2 flex items-center gap-4 animate-pulse ${alertData.isHigh ? 'bg-danger/20 border-danger text-danger' : 'bg-blue-500/20 border-blue-500 text-blue-400'}`}>
+          <AlertTriangle size={32} />
+          <div>
+            <h3 className="text-xl font-bold">EMERGENCY ALERT</h3>
+            <p className="font-medium">{alertData.message}</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex justify-between items-center bg-surface p-6 rounded-2xl shadow-lg border border-surface-hover backdrop-blur-md">
         <div className="flex items-center gap-4">
